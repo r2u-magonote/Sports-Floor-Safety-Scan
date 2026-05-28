@@ -794,7 +794,7 @@ function checkPW(){
 </div>
 
 <!-- デモモードボタン（固定） -->
-<button id="demo-mode-btn" onclick="openCompanySwitcher()" style="position:fixed;bottom:76px;right:16px;background:#0d2b45;color:white;border:none;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer;z-index:199;box-shadow:0 2px 8px rgba(0,0,0,.2)">デモ切替</button>
+<button id="demo-mode-btn" onclick="openCompanySwitcher()" style="position:fixed;bottom:76px;right:16px;background:#0d2b45;color:white;border:none;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer;z-index:199;box-shadow:0 2px 8px rgba(0,0,0,.2);display:none">会社切替</button>
 
 <!-- ファイル入力 -->
 <input type="file" id="photo-input" accept="image/*" style="position:absolute;width:0;height:0;opacity:0;left:-9999px">
@@ -2222,6 +2222,8 @@ function loadSpecTemplate(grade) {
 
 // ===== 施設一覧レポート =====
 function openReport() {
+  document.getElementById('demo-mode-btn').style.display = 'none';
+  document.getElementById('company-switcher').style.display = 'none';
   // グループセレクト更新
   const sel = document.getElementById('report-group');
   sel.innerHTML = '<option value="">すべてのグループ</option>';
@@ -3148,6 +3150,8 @@ function doLogout() {
 }
 
 function goToSplash() {
+  document.getElementById('demo-mode-btn').style.display = 'none';
+  document.getElementById('company-switcher').style.display = 'none';
   const list = document.getElementById('s-list');
   const splash = document.getElementById('s-splash');
   if(list) list.className = 'screen';
@@ -3283,6 +3287,11 @@ function openCaseById(id) {
 let curCaseId = null;
 
 function goBack() {
+  // 一覧に戻ったときはボタンを表示
+  setTimeout(() => {
+    const listActive = document.getElementById('s-list')?.className.includes('active');
+    if(listActive) document.getElementById('demo-mode-btn').style.display = 'block';
+  }, 50);
   document.getElementById('s-list').className = 'screen active';
   document.getElementById('s-detail').className = 'screen';
   document.getElementById('hdr-title').textContent = 'Sports Floor Safety Scan';
