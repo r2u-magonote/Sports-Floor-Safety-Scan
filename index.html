@@ -269,18 +269,18 @@ function checkPW(){
       修繕提案・報告書作成までワンストップで支援します。
     </div>
     <!-- CTAボタン -->
-    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px">
+    <div style="margin-bottom:16px">
       <button onclick="goToMain()" style="padding:15px 44px;background:white;color:#0055A5;border:none;border-radius:50px;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:1px;box-shadow:0 6px 28px rgba(0,0,0,.35)">
         点検を開始する　›
       </button>
-      <div style="font-size:11px;color:rgba(255,255,255,.45);letter-spacing:1px">for 株式会社 Be-Kind</div>
     </div>
     <!-- ログアウトボタン -->
-    <div>
+    <div style="margin-bottom:10px">
       <button onclick="doLogout()" style="font-size:11px;padding:6px 14px;background:rgba(255,255,255,.12);border:0.5px solid rgba(255,255,255,.3);border-radius:6px;color:rgba(255,255,255,.6);cursor:pointer">
         ログアウト
       </button>
     </div>
+    <div style="font-size:11px;color:rgba(255,255,255,.45);letter-spacing:1px">for 株式会社 Be-Kind</div>
   </div>
 </div>
 <div class="screen" id="s-list">
@@ -3109,6 +3109,8 @@ function openCase(name, rating, date, groupId) {
     ];
     maps[0].nextNo = 8;
   }
+  document.getElementById('demo-mode-btn').style.display = 'none';
+  document.getElementById('company-switcher').style.display = 'none';
   document.getElementById('s-list').className = 'screen';
   document.getElementById('s-detail').className = 'screen active';
   document.getElementById('hdr-title').textContent = name;
@@ -3159,8 +3161,11 @@ function goToSplash() {
 }
 
 function goToMain() {
-  document.getElementById('s-splash').className = 'screen';
+  const splash = document.getElementById('s-splash');
+  splash.className = 'screen';
+  splash.style.display = '';
   document.getElementById('s-list').className = 'screen active';
+  document.getElementById('demo-mode-btn').style.display = 'block';
   // ロゴをセット（JSで定義済みのBEKIND_LOGOを使う）
   renderGroupList();
 }
