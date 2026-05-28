@@ -294,7 +294,10 @@ function checkPW(){
       <button onclick="goToSplash()" style="font-size:11px;padding:4px 10px;background:none;border:0.5px solid var(--border2);border-radius:6px;color:var(--text2);cursor:pointer;min-height:32px">← トップ</button>
       <div class="st" style="margin:0">点検案件一覧</div>
     </div>
-    <button class="bp" onclick="addNewCase()">＋ 新規作成</button>
+    <div style="display:flex;gap:6px">
+      <button onclick="openReport()" style="font-size:11px;padding:4px 10px;background:none;border:0.5px solid var(--border2);border-radius:6px;color:var(--text2);cursor:pointer;min-height:32px">一覧レポート</button>
+      <button class="bp" onclick="addNewCase()">＋ 新規作成</button>
+    </div>
   </div>
   <div id="group-list"></div>
 </div>
@@ -714,6 +717,85 @@ function checkPW(){
   </div>
 </div>
 
+<!-- ===== 施設一覧レポート画面 ===== -->
+<div id="s-report" class="screen" style="padding:12px;max-width:600px;margin:0 auto">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+    <button onclick="document.getElementById('s-report').className='screen';document.getElementById('s-list').className='screen active'" style="font-size:12px;padding:4px 10px;border:0.5px solid var(--border2);border-radius:6px;background:none;color:var(--text2);cursor:pointer">← 一覧</button>
+    <div style="font-size:16px;font-weight:700;color:var(--navy)">点検施設一覧レポート</div>
+  </div>
+
+  <!-- フィルター -->
+  <div class="card" style="margin-bottom:10px">
+    <div class="st" style="margin-bottom:10px">出力条件</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:3px">開始日</div>
+        <input type="date" id="report-from" style="width:100%;padding:7px;border:0.5px solid var(--border2);border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:3px">終了日</div>
+        <input type="date" id="report-to" style="width:100%;padding:7px;border:0.5px solid var(--border2);border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+    </div>
+    <div style="margin-bottom:8px">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:3px">グループ</div>
+      <select id="report-group" style="width:100%;padding:7px;border:0.5px solid var(--border2);border-radius:6px;font-size:13px;background:var(--bg)">
+        <option value="">すべてのグループ</option>
+      </select>
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:3px">判定フィルター</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <label style="font-size:12px;display:flex;align-items:center;gap:3px"><input type="checkbox" class="rating-filter" value="A" checked> A</label>
+        <label style="font-size:12px;display:flex;align-items:center;gap:3px"><input type="checkbox" class="rating-filter" value="B" checked> B</label>
+        <label style="font-size:12px;display:flex;align-items:center;gap:3px"><input type="checkbox" class="rating-filter" value="C" checked> C</label>
+        <label style="font-size:12px;display:flex;align-items:center;gap:3px"><input type="checkbox" class="rating-filter" value="D" checked> D</label>
+        <label style="font-size:12px;display:flex;align-items:center;gap:3px"><input type="checkbox" class="rating-filter" value="E" checked> E</label>
+      </div>
+    </div>
+    <button onclick="buildReport()" class="bp" style="width:100%">一覧を表示</button>
+  </div>
+
+  <!-- 結果表示 -->
+  <div id="report-result" style="display:none">
+    <div class="card" style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--navy)" id="report-title-txt"></div>
+          <div style="font-size:11px;color:var(--text2)" id="report-count-txt"></div>
+        </div>
+        <button onclick="printReport()" style="font-size:12px;padding:6px 14px;background:var(--navy);color:white;border:none;border-radius:6px;cursor:pointer">PDF出力</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table id="report-table" style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="background:#f1f5f9">
+              <th style="padding:6px 8px;text-align:left;border:0.5px solid #e2e8f0;white-space:nowrap">No.</th>
+              <th style="padding:6px 8px;text-align:left;border:0.5px solid #e2e8f0">施設名</th>
+              <th style="padding:6px 8px;text-align:left;border:0.5px solid #e2e8f0;white-space:nowrap">グループ</th>
+              <th style="padding:6px 8px;text-align:center;border:0.5px solid #e2e8f0;white-space:nowrap">点検日</th>
+              <th style="padding:6px 8px;text-align:center;border:0.5px solid #e2e8f0;white-space:nowrap">担当者</th>
+              <th style="padding:6px 8px;text-align:center;border:0.5px solid #e2e8f0;white-space:nowrap">判定</th>
+            </tr>
+          </thead>
+          <tbody id="report-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 会社切替パネル（デモモード） ===== -->
+<div id="company-switcher" style="display:none;position:fixed;bottom:80px;right:16px;background:white;border-radius:12px;padding:16px;width:240px;box-shadow:0 4px 20px rgba(0,0,0,.2);z-index:200;border:1px solid #e2e8f0">
+  <div style="font-size:12px;font-weight:700;color:#0d2b45;margin-bottom:4px">デモモード：会社切替</div>
+  <div style="font-size:10px;color:#64748b;margin-bottom:10px">会社コードでデータを分離して表示します</div>
+  <div id="company-list"></div>
+  <button onclick="document.getElementById('company-switcher').style.display='none'" style="width:100%;margin-top:8px;padding:6px;background:none;border:0.5px solid #e2e8f0;border-radius:6px;font-size:11px;color:#64748b;cursor:pointer">閉じる</button>
+</div>
+
+<!-- デモモードボタン（固定） -->
+<button id="demo-mode-btn" onclick="openCompanySwitcher()" style="position:fixed;bottom:76px;right:16px;background:#0d2b45;color:white;border:none;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer;z-index:199;box-shadow:0 2px 8px rgba(0,0,0,.2)">デモ切替</button>
+
 <!-- ファイル入力 -->
 <input type="file" id="photo-input" accept="image/*" style="position:absolute;width:0;height:0;opacity:0;left:-9999px">
 <!-- map upload: フルスクリーンオーバーレイ方式 -->
@@ -984,6 +1066,58 @@ function newMap(id, name) {
 let manRating = null, manReason = '';
 let curCase = {name:'',date:''};
 // ===== グループ管理 =====
+// ===== マルチテナント デモ設定 =====
+const DEMO_COMPANIES = [
+  {
+    code: 'BEKIND', name: 'Be-Kind（管理者）', role: 'admin',
+    groups: [{id:1,name:'足立区'},{id:2,name:'北区'},{id:3,name:'荒川区'}],
+    cases: [
+      {id:1,name:'足立区立西新井中学校',rating:'C',date:'2026-04-18',inspector:'猪俣',groupId:1},
+      {id:2,name:'足立区立江北小学校',rating:'B',date:'2026-03-10',inspector:'安藤',groupId:1},
+      {id:3,name:'北区立王子第一小学校',rating:'D',date:'2026-02-20',inspector:'猪俣',groupId:2},
+      {id:4,name:'北区立赤羽中学校',rating:'A',date:'2026-01-15',inspector:'安藤',groupId:2},
+      {id:5,name:'荒川区立第三中学校',rating:'B',date:'2026-04-01',inspector:'猪俣',groupId:3},
+    ]
+  },
+  {
+    code: 'MIZUNO', name: 'ミズノ株式会社', role: 'user',
+    groups: [{id:1,name:'関東エリア'},{id:2,name:'関西エリア'}],
+    cases: [
+      {id:1,name:'東京体育館',rating:'B',date:'2026-03-25',inspector:'田中',groupId:1},
+      {id:2,name:'神奈川県立スポーツセンター',rating:'A',date:'2026-02-14',inspector:'田中',groupId:1},
+      {id:3,name:'大阪市立住吉体育館',rating:'C',date:'2026-04-05',inspector:'鈴木',groupId:2},
+      {id:4,name:'兵庫県立武道館',rating:'B',date:'2026-01-20',inspector:'鈴木',groupId:2},
+    ]
+  },
+  {
+    code: 'SENOH', name: '株式会社セノー', role: 'user',
+    groups: [{id:1,name:'東日本'},{id:2,name:'西日本'}],
+    cases: [
+      {id:1,name:'千葉市立稲毛高校体育館',rating:'C',date:'2026-04-10',inspector:'山田',groupId:1},
+      {id:2,name:'埼玉県立浦和高校体育館',rating:'B',date:'2026-03-01',inspector:'山田',groupId:1},
+      {id:3,name:'広島市立基町高校体育館',rating:'D',date:'2026-02-28',inspector:'佐藤',groupId:2},
+    ]
+  }
+];
+
+let currentCompanyCode = 'BEKIND';
+function getCurrentCompany() {
+  return DEMO_COMPANIES.find(c => c.code === currentCompanyCode) || DEMO_COMPANIES[0];
+}
+function switchCompany(code) {
+  currentCompanyCode = code;
+  const co = getCurrentCompany();
+  groups = co.groups.map(g => ({...g}));
+  cases = co.cases.map(c => ({...c}));
+  nextGroupId = Math.max(...groups.map(g => g.id)) + 1;
+  nextCaseId = Math.max(...cases.map(c => c.id)) + 1;
+  // ヘッダー更新
+  const hdrSub = document.getElementById('hdr-sub');
+  if (hdrSub) hdrSub.textContent = co.name + (co.role==='admin' ? '　[管理者]' : '');
+  renderGroupList();
+  document.getElementById('company-switcher').style.display = 'none';
+}
+
 let groups = [
   {id:1, name:'足立区'},
   {id:2, name:'北区'},
@@ -2084,6 +2218,111 @@ function loadSpecTemplate(grade) {
   if (!grade) return;
   const ta = document.getElementById('spec-text');
   if (ta) ta.value = SPEC_TEMPLATES[grade] || '';
+}
+
+// ===== 施設一覧レポート =====
+function openReport() {
+  // グループセレクト更新
+  const sel = document.getElementById('report-group');
+  sel.innerHTML = '<option value="">すべてのグループ</option>';
+  groups.forEach(g => {
+    const o = document.createElement('option');
+    o.value = g.id; o.textContent = g.name;
+    sel.appendChild(o);
+  });
+  // デフォルト日付（当年）
+  const now = new Date();
+  document.getElementById('report-from').value = now.getFullYear() + '-01-01';
+  document.getElementById('report-to').value = now.getFullYear() + '-12-31';
+  document.getElementById('report-result').style.display = 'none';
+  document.getElementById('s-list').className = 'screen';
+  document.getElementById('s-report').className = 'screen active';
+}
+
+function buildReport() {
+  const from = document.getElementById('report-from').value;
+  const to = document.getElementById('report-to').value;
+  const gid = document.getElementById('report-group').value;
+  const ratings = [...document.querySelectorAll('.rating-filter:checked')].map(c => c.value);
+
+  const filtered = cases.filter(c => {
+    if (from && c.date < from) return false;
+    if (to && c.date > to) return false;
+    if (gid && String(c.groupId) !== String(gid)) return false;
+    if (!ratings.includes(c.rating || 'C')) return false;
+    return true;
+  }).sort((a, b) => a.date < b.date ? 1 : -1);
+
+  const tbody = document.getElementById('report-tbody');
+  tbody.innerHTML = '';
+  const groupName = gid ? (groups.find(g => String(g.id) === String(gid))?.name || '') : 'すべて';
+  const co = getCurrentCompany();
+
+  filtered.forEach((c, i) => {
+    const g = groups.find(x => x.id === c.groupId);
+    const rateColors = {A:'#166534',B:'#0055A5',C:'#92400E',D:'#dc2626',E:'#7c3aed'};
+    const tr = document.createElement('tr');
+    tr.style.background = i%2===0 ? 'white' : '#f8fafc';
+    tr.innerHTML = `
+      <td style="padding:5px 8px;border:0.5px solid #e2e8f0;color:#64748b">${i+1}</td>
+      <td style="padding:5px 8px;border:0.5px solid #e2e8f0;font-weight:600">${c.name}</td>
+      <td style="padding:5px 8px;border:0.5px solid #e2e8f0;color:#64748b">${g?.name||'—'}</td>
+      <td style="padding:5px 8px;border:0.5px solid #e2e8f0;text-align:center">${c.date}</td>
+      <td style="padding:5px 8px;border:0.5px solid #e2e8f0;text-align:center">${c.inspector||'—'}</td>
+      <td style="padding:5px 8px;border:0.5px solid #e2e8f0;text-align:center;font-weight:800;color:${rateColors[c.rating||'C']||'#333'}">${c.rating||'—'}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  const fromStr = from || '—', toStr = to || '—';
+  document.getElementById('report-title-txt').textContent = `${co.name}　${fromStr} 〜 ${toStr}　グループ：${groupName}`;
+  document.getElementById('report-count-txt').textContent = `${filtered.length}件の施設が該当`;
+  document.getElementById('report-result').style.display = 'block';
+}
+
+function printReport() {
+  const co = getCurrentCompany();
+  const from = document.getElementById('report-from').value;
+  const to = document.getElementById('report-to').value;
+  const title = document.getElementById('report-title-txt').textContent;
+  const count = document.getElementById('report-count-txt').textContent;
+  const tableHTML = document.getElementById('report-table').outerHTML;
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>点検施設一覧</title>
+  <style>
+    body{font-family:-apple-system,Arial,sans-serif;margin:24px;font-size:11pt;color:#1e293b}
+    h1{font-size:16pt;color:#0d2b45;border-bottom:2pt solid #0d7a82;padding-bottom:6px;margin-bottom:4px}
+    .sub{font-size:10pt;color:#64748b;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse;font-size:10pt}
+    th{background:#0d2b45;color:white;padding:6px 8px;text-align:left;font-size:9pt}
+    td{padding:5px 8px;border:0.5pt solid #e2e8f0}
+    tr:nth-child(even) td{background:#f8fafc}
+    .footer{margin-top:24px;font-size:8pt;color:#94a3b8;border-top:0.5pt solid #e2e8f0;padding-top:6px;display:flex;justify-content:space-between}
+    @media print{body{margin:10mm} @page{margin:12mm}}
+  </style></head><body>
+  <h1>点検施設一覧レポート</h1>
+  <div class="sub">${title}　（${count}）</div>
+  ${tableHTML}
+  <div class="footer"><span>Sports Floor Safety Scan</span><span>${new Date().toLocaleDateString('ja-JP')}</span></div>
+  </body></html>`);
+  win.document.close();
+  setTimeout(() => { win.print(); }, 300);
+}
+
+// ===== 会社切替（デモモード） =====
+function openCompanySwitcher() {
+  const list = document.getElementById('company-list');
+  const sw = document.getElementById('company-switcher');
+  list.innerHTML = '';
+  DEMO_COMPANIES.forEach(co => {
+    const btn = document.createElement('button');
+    btn.style.cssText = `width:100%;text-align:left;padding:8px 10px;margin-bottom:4px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:${co.code===currentCompanyCode?'700':'400'};background:${co.code===currentCompanyCode?'#eff6ff':'#f8fafc'};border:${co.code===currentCompanyCode?'1.5px solid #0055A5':'0.5px solid #e2e8f0'};color:${co.code===currentCompanyCode?'#0055A5':'#1e293b'}`;
+    btn.innerHTML = `<div>${co.name}</div><div style="font-size:10px;color:#94a3b8;margin-top:1px">会社コード：${co.code}　ロール：${co.role}</div>`;
+    btn.onclick = () => switchCompany(co.code);
+    list.appendChild(btn);
+  });
+  sw.style.display = sw.style.display==='none' ? 'block' : 'none';
 }
 
 function cancelPhotoUpload() {
