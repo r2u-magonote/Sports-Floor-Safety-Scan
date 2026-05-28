@@ -10,7 +10,7 @@ body{background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Hiragino S
 .app{max-width:820px;margin:0 auto}
 :root{--bg:#fff;--bg2:#f5f5f5;--bg-info:#eff6ff;--bg-success:#f0fdf4;--bg-warn:#fefce8;
   --text:#111827;--text2:#6b7280;--text3:#9ca3af;--ti:#1d4ed8;--ts:#166534;--tw:#854d0e;
-  --border:rgba(0,0,0,.12);--border2:rgba(0,0,0,.2);--bi:#93c5fd;--r8:8px;--r12:12px}
+  --border:rgba(0,0,0,.12);--border2:rgba(0,0,0,.2);--bi:#93c5fd;--r8:8px;--r12:12px;--navy:#0d2b45}
 .hdr{display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--r12);margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .hdr-t{font-size:15px;font-weight:700;color:var(--text)}
 .hdr-s{font-size:11px;color:var(--text2)}
@@ -764,7 +764,7 @@ function checkPW(){
           <div style="font-size:13px;font-weight:700;color:var(--navy)" id="report-title-txt"></div>
           <div style="font-size:11px;color:var(--text2)" id="report-count-txt"></div>
         </div>
-        <button onclick="printReport()" style="font-size:12px;padding:6px 14px;background:var(--navy);color:white;border:none;border-radius:6px;cursor:pointer">PDF出力</button>
+        <button onclick="printReport()" style="font-size:12px;padding:8px 16px;background:#0d2b45;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:700;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.15)">⬇ PDF出力</button>
       </div>
       <div style="overflow-x:auto">
         <table id="report-table" style="width:100%;border-collapse:collapse;font-size:12px">
@@ -1050,6 +1050,8 @@ let iconsBackup = null;
 let claudeApiKey = ''; // Anthropic APIキー（セッション中のみ保持）
 let selType = 1;
 let editMode = false;
+let _printMode = 'case'; // 'case' | 'list'
+let _listPrintTitle = '';
 
 // Maps: array of map objects (max 5)
 let maps = [];
@@ -2285,31 +2287,66 @@ function printReport() {
   const co = getCurrentCompany();
   const from = document.getElementById('report-from').value;
   const to = document.getElementById('report-to').value;
-  const title = document.getElementById('report-title-txt').textContent;
-  const count = document.getElementById('report-count-txt').textContent;
-  const tableHTML = document.getElementById('report-table').outerHTML;
+  const titleTxt = document.getElementById('report-title-txt')?.textContent || '';
+  const countTxt = document.getElementById('report-count-txt')?.textContent || '';
+  const today = new Date().toLocaleDateString('ja-JP');
 
-  const win = window.open('', '_blank');
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
-  <title>点検施設一覧</title>
-  <style>
-    body{font-family:-apple-system,Arial,sans-serif;margin:24px;font-size:11pt;color:#1e293b}
-    h1{font-size:16pt;color:#0d2b45;border-bottom:2pt solid #0d7a82;padding-bottom:6px;margin-bottom:4px}
-    .sub{font-size:10pt;color:#64748b;margin-bottom:16px}
-    table{width:100%;border-collapse:collapse;font-size:10pt}
-    th{background:#0d2b45;color:white;padding:6px 8px;text-align:left;font-size:9pt}
-    td{padding:5px 8px;border:0.5pt solid #e2e8f0}
-    tr:nth-child(even) td{background:#f8fafc}
-    .footer{margin-top:24px;font-size:8pt;color:#94a3b8;border-top:0.5pt solid #e2e8f0;padding-top:6px;display:flex;justify-content:space-between}
-    @media print{body{margin:10mm} @page{margin:12mm}}
-  </style></head><body>
-  <h1>点検施設一覧レポート</h1>
-  <div class="sub">${title}　（${count}）</div>
-  ${tableHTML}
-  <div class="footer"><span>Sports Floor Safety Scan</span><span>${new Date().toLocaleDateString('ja-JP')}</span></div>
-  </body></html>`);
-  win.document.close();
-  setTimeout(() => { win.print(); }, 300);
+  _listPrintTitle = `【一覧レポート】${co.name}_点検施設一覧_${from}〜${to}`;
+
+  const tbodyRows = document.getElementById('report-tbody');
+  let rowsHTML = '';
+  if (tbodyRows) {
+    tbodyRows.querySelectorAll('tr').forEach((tr, i) => {
+      const cells = tr.querySelectorAll('td');
+      if (!cells.length) return;
+      const bg = i % 2 === 0 ? 'white' : '#f8fafc';
+      rowsHTML += `<tr style="background:${bg}">`;
+      cells.forEach(td => {
+        rowsHTML += `<td style="${td.getAttribute('style') || 'padding:5px 8px;border:0.5pt solid #e2e8f0'}">${td.innerHTML}</td>`;
+      });
+      rowsHTML += '</tr>';
+    });
+  }
+
+  const html = `
+<div style="padding:28px 36px;font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic','Meiryo',Arial,sans-serif;color:#1e293b">
+  <div style="border-bottom:2.5pt solid #0d2b45;padding-bottom:14px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:flex-end">
+    <div>
+      <div style="font-size:17pt;font-weight:800;color:#0d2b45;letter-spacing:1px">点検施設一覧レポート</div>
+      <div style="font-size:8.5pt;color:#64748b;margin-top:4px;letter-spacing:0.5px">Sports Floor Safety Scan — 体育館床安全点検アプリ</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:12pt;font-weight:700;color:#0d2b45;margin-bottom:2px">${co.name}</div>
+      <div style="font-size:8.5pt;color:#64748b">出力日：${today}</div>
+    </div>
+  </div>
+  <div style="background:#f0f7ff;border-left:3px solid #0d2b45;border-radius:0 6px 6px 0;padding:8px 14px;margin-bottom:16px">
+    <div style="font-size:10pt;font-weight:700;color:#0d2b45">${titleTxt}</div>
+    <div style="font-size:8.5pt;color:#64748b;margin-top:2px">${countTxt}</div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:9pt">
+    <thead>
+      <tr style="background:#0d2b45">
+        <th style="padding:6px 8px;text-align:left;border:0.5pt solid #1e3a5f;color:white;font-size:8.5pt;white-space:nowrap;width:32px">No.</th>
+        <th style="padding:6px 8px;text-align:left;border:0.5pt solid #1e3a5f;color:white;font-size:8.5pt">施設名</th>
+        <th style="padding:6px 8px;text-align:left;border:0.5pt solid #1e3a5f;color:white;font-size:8.5pt">グループ</th>
+        <th style="padding:6px 8px;text-align:center;border:0.5pt solid #1e3a5f;color:white;font-size:8.5pt;white-space:nowrap">点検日</th>
+        <th style="padding:6px 8px;text-align:center;border:0.5pt solid #1e3a5f;color:white;font-size:8.5pt;white-space:nowrap">担当者</th>
+        <th style="padding:6px 8px;text-align:center;border:0.5pt solid #1e3a5f;color:white;font-size:8.5pt;white-space:nowrap;width:42px">判定</th>
+      </tr>
+    </thead>
+    <tbody>${rowsHTML}</tbody>
+  </table>
+  <div style="margin-top:24px;padding-top:8px;border-top:0.5pt solid #e2e8f0;display:flex;justify-content:space-between;font-size:7.5pt;color:#94a3b8">
+    <span>Sports Floor Safety Scan — 体育館床安全点検アプリ</span>
+    <span>${co.name}　|　出力日：${today}</span>
+  </div>
+</div>`;
+
+  document.getElementById('print-frame').innerHTML = html;
+  document.getElementById('print-modal').classList.add('show');
+  document.getElementById('print-modal').scrollTop = 0;
+  _printMode = 'list';
 }
 
 // ===== 会社切替（デモモード） =====
@@ -3905,15 +3942,20 @@ ${pb}
 function closePrint() {
   document.getElementById('print-modal').classList.remove('show');
   document.getElementById('print-frame').innerHTML = '';
+  _printMode = 'case';
 }
 
 function doPrintWindow() {
-  const fname_name = document.getElementById('f-name')?.value || curCase.name || '施設名';
-  const fname_date = document.getElementById('f-date')?.value || curCase.date || '';
   const origTitle = document.title;
-  document.title = `【報告書】${fname_name}体育館床安全点検・診断調査の調査報告書_点検日：${fname_date}`;
+  if (_printMode === 'list') {
+    document.title = _listPrintTitle;
+  } else {
+    const fname_name = document.getElementById('f-name')?.value || curCase.name || '施設名';
+    const fname_date = document.getElementById('f-date')?.value || curCase.date || '';
+    document.title = `【報告書】${fname_name}体育館床安全点検・診断調査の調査報告書_点検日：${fname_date}`;
+  }
   window.print();
-  setTimeout(() => { document.title = origTitle; }, 500);
+  setTimeout(() => { document.title = origTitle; _printMode = 'case'; }, 500);
 }
 
 // ===== INIT =====
@@ -3923,7 +3965,7 @@ initPhotoInput(); // 写真アップロードのイベント登録
 // スプラッシュロゴをセット
 (function(){
   // const img = document.getElementById('splash-logo'); // ロゴ非表示
-  if(img && typeof BEKIND_LOGO !== 'undefined') img.src = BEKIND_LOGO;
+  // if(img && typeof BEKIND_LOGO !== 'undefined') img.src = BEKIND_LOGO;
   renderGroupList();
 })();
 </script>
