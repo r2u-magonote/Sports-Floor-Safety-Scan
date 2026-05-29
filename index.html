@@ -164,59 +164,197 @@ select{font-size:12px;padding:5px 8px;border:0.5px solid var(--border2);border-r
 <body>
 
 <!-- ログイン画面 -->
+<!-- ユーザー管理モーダル -->
+<div id="user-mgmt-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.5);overflow-y:auto;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif">
+  <div style="background:white;border-radius:14px;padding:24px 20px;width:calc(100%-32px);max-width:480px;margin:24px auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:15px;font-weight:800;color:#0d2b45">👥 ユーザー管理</div>
+      <button onclick="closeUserMgmt()" style="border:none;background:none;font-size:18px;cursor:pointer;color:#64748b">✕</button>
+    </div>
+    <div style="font-size:11px;color:#64748b;margin-bottom:14px;background:#f0f7ff;padding:8px 12px;border-radius:6px;line-height:1.6">
+      ・アクセスコードは20桁の英数字・記号で設定してください<br>
+      ・メールアドレスは後から追加できます（任意）<br>
+      ・管理者コードでのみこの画面を開けます
+    </div>
+    <div id="user-list-edit"></div>
+    <button onclick="addUserSlot()" style="width:100%;padding:10px;background:#f1f5f9;border:1px dashed #94a3b8;border-radius:8px;font-size:13px;color:#475569;cursor:pointer;margin-top:8px">＋ ユーザーを追加</button>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button onclick="saveUsers()" style="flex:1;padding:11px;background:#0d2b45;color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">💾 保存</button>
+      <button onclick="closeUserMgmt()" style="padding:11px 16px;background:#f1f5f9;border:none;border-radius:8px;font-size:13px;cursor:pointer">キャンセル</button>
+    </div>
+  </div>
+</div>
+
 <div id="pw-screen" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#001F3F 0%,#003A7A 50%,#0055A5 100%);display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif">
   <div style="background:white;border-radius:16px;padding:36px 28px;width:calc(100% - 48px);max-width:380px;box-shadow:0 8px 40px rgba(0,0,0,.3)">
-    <!-- タイトル -->
     <div style="text-align:center;margin-bottom:28px">
       <div style="font-size:13px;font-weight:800;color:#0055A5;letter-spacing:2px;margin-bottom:4px">SPORTS FLOOR SAFETY SCAN</div>
       <div style="font-size:12px;color:#64748b">体育館床安全点検システム</div>
     </div>
-    <!-- メールアドレス -->
-    <div style="margin-bottom:14px">
-      <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:5px">メールアドレス</div>
-      <input type="email" id="login-email" placeholder="example@email.com" style="width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;outline:none" onkeydown="if(event.key==='Enter')document.getElementById('pw-input').focus()">
-    </div>
-    <!-- パスワード -->
     <div style="margin-bottom:8px">
-      <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:5px">パスワード</div>
-      <input type="password" id="pw-input" placeholder="パスワードを入力" style="width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;outline:none" onkeydown="if(event.key==='Enter')checkPW()">
+      <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:5px">アクセスコード</div>
+      <input type="password" id="pw-input" placeholder="20桁のアクセスコードを入力" autocomplete="off"
+        style="width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;outline:none;letter-spacing:2px"
+        onkeydown="if(event.key==='Enter')checkPW()">
     </div>
     <div id="pw-error" style="font-size:12px;color:#dc2626;min-height:18px;margin-bottom:12px;text-align:center"></div>
     <button onclick="checkPW()" style="width:100%;padding:13px;background:#0055A5;color:white;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:1px">ログイン</button>
-    <div style="text-align:center;margin-top:16px;font-size:11px;color:#94a3b8">
-      本番環境ではアカウント認証を行います
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:#cbd5e1">
+      お手元のアクセスコードを入力してください
     </div>
   </div>
-</div></div>
+</div>
 
 <script>
-(function(){
-  // セッション中はパスワード入力不要
-  if(sessionStorage.getItem('sfss_auth')==='1'){
-    document.getElementById('pw-screen').style.display='none';
-  }
-  // ロゴをセット（BEKIND_LOGOが定義されたあと）
-  window.addEventListener('DOMContentLoaded', function(){
-    // ロゴ非表示（デモ版）
-  });
-})();
-function checkPW(){
-  var email = document.getElementById('login-email').value.trim();
-  var pw = document.getElementById('pw-input').value;
-  var errEl = document.getElementById('pw-error');
-  if(!email){
-    errEl.textContent = 'メールアドレスを入力してください';
-    document.getElementById('login-email').focus();
+// ===== ユーザー管理 =====
+// ユーザーリストをlocalStorageに保存（端末間共有はFirebase移行後）
+const ADMIN_SETUP_CODE = 'SFSS-ADMIN-SETUP-2026'; // 管理者専用セットアップコード（変更推奨）
+
+function loadUsers() {
+  try {
+    const saved = localStorage.getItem('sfss_users');
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  // 初期デフォルト（管理者1名のみ）
+  return [
+    { id:1, name:'管理者', code:'', email:'', role:'admin', active:true, note:'' }
+  ];
+}
+
+function saveUsersData(users) {
+  localStorage.setItem('sfss_users', JSON.stringify(users));
+}
+
+let sfssUsers = loadUsers();
+let currentSfssUser = null;
+
+function checkPW() {
+  const code = document.getElementById('pw-input').value.trim();
+  const errEl = document.getElementById('pw-error');
+  if (!code) {
+    errEl.textContent = 'アクセスコードを入力してください';
+    document.getElementById('pw-input').focus();
     return;
   }
-  if(pw === 'ProC1@ni-rl2hAt'){
-    sessionStorage.setItem('sfss_auth','1');
-    document.getElementById('pw-screen').style.display='none';
+  // 管理者セットアップコード
+  if (code === ADMIN_SETUP_CODE) {
+    currentSfssUser = { id:0, name:'管理者（セットアップ）', role:'admin' };
+    sessionStorage.setItem('sfss_auth', '1');
+    sessionStorage.setItem('sfss_user', JSON.stringify(currentSfssUser));
+    document.getElementById('pw-screen').style.display = 'none';
+    updateAdminUI();
+    return;
+  }
+  // 登録ユーザーの照合
+  const users = loadUsers();
+  const matched = users.find(u => u.active && u.code === code);
+  if (matched) {
+    currentSfssUser = matched;
+    sessionStorage.setItem('sfss_auth', '1');
+    sessionStorage.setItem('sfss_user', JSON.stringify(matched));
+    document.getElementById('pw-screen').style.display = 'none';
+    updateAdminUI();
   } else {
-    errEl.textContent = 'パスワードが正しくありません';
-    document.getElementById('pw-input').value='';
+    errEl.textContent = 'アクセスコードが正しくありません';
+    document.getElementById('pw-input').value = '';
     document.getElementById('pw-input').focus();
   }
+}
+
+(function(){
+  if (sessionStorage.getItem('sfss_auth') === '1') {
+    document.getElementById('pw-screen').style.display = 'none';
+    try {
+      currentSfssUser = JSON.parse(sessionStorage.getItem('sfss_user') || 'null');
+    } catch(e) {}
+  }
+})();
+
+// ===== ユーザー管理画面 =====
+function openUserMgmt() {
+  const u = currentSfssUser;
+  if (!u || u.role !== 'admin') { alert('管理者のみアクセスできます'); return; }
+  sfssUsers = loadUsers();
+  renderUserList();
+  document.getElementById('user-mgmt-modal').style.display = 'block';
+}
+
+function closeUserMgmt() {
+  document.getElementById('user-mgmt-modal').style.display = 'none';
+}
+
+function renderUserList() {
+  const wrap = document.getElementById('user-list-edit');
+  wrap.innerHTML = '';
+  sfssUsers.forEach((u, i) => {
+    const div = document.createElement('div');
+    div.style.cssText = 'border:0.5px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:8px;background:#fafafa';
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:700;color:#0d2b45;background:#e0f2fe;padding:2px 8px;border-radius:10px">#${u.id}</span>
+        <input value="${u.name||''}" placeholder="名前" onchange="sfssUsers[${i}].name=this.value"
+          style="flex:1;font-size:13px;font-weight:600;border:none;border-bottom:1px solid #e2e8f0;padding:2px 4px;background:transparent;outline:none">
+        <select onchange="sfssUsers[${i}].role=this.value" style="font-size:11px;padding:3px 6px;border:0.5px solid #e2e8f0;border-radius:6px;background:white">
+          <option value="inspector" ${u.role==='inspector'?'selected':''}>点検者</option>
+          <option value="admin" ${u.role==='admin'?'selected':''}>管理者</option>
+        </select>
+        <label style="font-size:11px;display:flex;align-items:center;gap:3px;cursor:pointer">
+          <input type="checkbox" ${u.active?'checked':''} onchange="sfssUsers[${i}].active=this.checked"> 有効
+        </label>
+      </div>
+      <div style="margin-bottom:6px">
+        <div style="font-size:10px;color:#64748b;margin-bottom:3px">アクセスコード（20桁）</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="text" value="${u.code||''}" placeholder="アクセスコードを入力" maxlength="30"
+            onchange="sfssUsers[${i}].code=this.value"
+            style="flex:1;font-size:12px;padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:6px;font-family:monospace;letter-spacing:1px">
+          <button onclick="genCode(${i})" style="font-size:11px;padding:6px 10px;background:#0d2b45;color:white;border:none;border-radius:6px;cursor:pointer;white-space:nowrap">自動生成</button>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:#64748b;margin-bottom:3px">メールアドレス（任意・後から追加可）</div>
+        <input type="email" value="${u.email||''}" placeholder="example@company.co.jp"
+          onchange="sfssUsers[${i}].email=this.value"
+          style="width:100%;font-size:12px;padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;box-sizing:border-box">
+      </div>
+    `;
+    wrap.appendChild(div);
+  });
+}
+
+function genCode(idx) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%^&*';
+  let code = '';
+  const arr = new Uint8Array(20);
+  crypto.getRandomValues(arr);
+  arr.forEach(b => { code += chars[b % chars.length]; });
+  sfssUsers[idx].code = code;
+  renderUserList();
+}
+
+function addUserSlot() {
+  const nextId = sfssUsers.length > 0 ? Math.max(...sfssUsers.map(u=>u.id)) + 1 : 1;
+  sfssUsers.push({ id:nextId, name:'', code:'', email:'', role:'inspector', active:true, note:'' });
+  renderUserList();
+  document.getElementById('user-list-edit').lastElementChild?.scrollIntoView({behavior:'smooth'});
+}
+
+function saveUsers() {
+  // 名前かコードが空のユーザーをチェック
+  const incomplete = sfssUsers.filter(u => u.active && (!u.name || !u.code));
+  if (incomplete.length > 0) {
+    alert('有効なユーザーには名前とアクセスコードを入力してください');
+    return;
+  }
+  // コードの重複チェック
+  const codes = sfssUsers.filter(u=>u.active && u.code).map(u=>u.code);
+  if (new Set(codes).size !== codes.length) {
+    alert('アクセスコードが重複しています。それぞれ異なるコードを設定してください');
+    return;
+  }
+  saveUsersData(sfssUsers);
+  closeUserMgmt();
+  alert('✅ ユーザー情報を保存しました');
 }
 </script>
 
@@ -230,6 +368,7 @@ function checkPW(){
   
 
   <button id="logout-btn" onclick="doLogout()" style="font-size:11px;padding:4px 10px;border:0.5px solid rgba(255,255,255,.3);border-radius:6px;background:none;color:rgba(255,255,255,.7);cursor:pointer;min-height:30px">ログアウト</button>
+  <button id="user-mgmt-btn" onclick="openUserMgmt()" style="font-size:11px;padding:4px 10px;border:0.5px solid rgba(255,255,255,.3);border-radius:6px;background:none;color:rgba(255,255,255,.7);cursor:pointer;min-height:30px;display:none">👥 管理</button>
   <button class="back-btn" id="back-btn" style="display:none" onclick="goBack()">← 一覧</button>
 </div>
 
@@ -764,7 +903,7 @@ function checkPW(){
           <div style="font-size:13px;font-weight:700;color:var(--navy)" id="report-title-txt"></div>
           <div style="font-size:11px;color:var(--text2)" id="report-count-txt"></div>
         </div>
-        <button onclick="printReport()" style="font-size:12px;padding:8px 16px;background:#0d2b45;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:700;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.15)">⬇ PDF出力</button>
+        <button onclick="printReport()" style="font-size:12px;padding:6px 14px;background:var(--navy);color:white;border:none;border-radius:6px;cursor:pointer">PDF出力</button>
       </div>
       <div style="overflow-x:auto">
         <table id="report-table" style="width:100%;border-collapse:collapse;font-size:12px">
@@ -1050,7 +1189,7 @@ let iconsBackup = null;
 let claudeApiKey = ''; // Anthropic APIキー（セッション中のみ保持）
 let selType = 1;
 let editMode = false;
-let _printMode = 'case'; // 'case' | 'list'
+let _printMode = 'case';
 let _listPrintTitle = '';
 
 // Maps: array of map objects (max 5)
@@ -2287,66 +2426,31 @@ function printReport() {
   const co = getCurrentCompany();
   const from = document.getElementById('report-from').value;
   const to = document.getElementById('report-to').value;
-  const titleTxt = document.getElementById('report-title-txt')?.textContent || '';
-  const countTxt = document.getElementById('report-count-txt')?.textContent || '';
-  const today = new Date().toLocaleDateString('ja-JP');
+  const title = document.getElementById('report-title-txt').textContent;
+  const count = document.getElementById('report-count-txt').textContent;
+  const tableHTML = document.getElementById('report-table').outerHTML;
 
-  _listPrintTitle = `【一覧レポート】${co.name}_点検施設一覧_${from}〜${to}`;
-
-  const tbodyRows = document.getElementById('report-tbody');
-  let rowsHTML = '';
-  if (tbodyRows) {
-    tbodyRows.querySelectorAll('tr').forEach((tr, i) => {
-      const cells = tr.querySelectorAll('td');
-      if (!cells.length) return;
-      const bg = i % 2 === 0 ? 'white' : '#f8fafc';
-      rowsHTML += `<tr style="background:${bg}">`;
-      cells.forEach(td => {
-        rowsHTML += `<td style="${td.getAttribute('style') || 'padding:5px 8px;border:0.5pt solid #e2e8f0'}">${td.innerHTML}</td>`;
-      });
-      rowsHTML += '</tr>';
-    });
-  }
-
-  const html = `
-<div style="padding:28px 36px;font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic','Meiryo',Arial,sans-serif;color:#1e293b">
-  <div style="border-bottom:2.5pt solid #0d2b45;padding-bottom:14px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:flex-end">
-    <div>
-      <div style="font-size:17pt;font-weight:800;color:#0d2b45;letter-spacing:1px">点検施設一覧レポート</div>
-      <div style="font-size:8.5pt;color:#64748b;margin-top:4px;letter-spacing:0.5px">Sports Floor Safety Scan — 体育館床安全点検アプリ</div>
-    </div>
-    <div style="text-align:right">
-      <div style="font-size:12pt;font-weight:700;color:#0d2b45;margin-bottom:2px">${co.name}</div>
-      <div style="font-size:8.5pt;color:#64748b">出力日：${today}</div>
-    </div>
-  </div>
-  <div style="background:#f0f7ff;border-left:3px solid #0d2b45;border-radius:0 6px 6px 0;padding:8px 14px;margin-bottom:16px">
-    <div style="font-size:10pt;font-weight:700;color:#0d2b45">${titleTxt}</div>
-    <div style="font-size:8.5pt;color:#64748b;margin-top:2px">${countTxt}</div>
-  </div>
-  <table style="width:100%;border-collapse:collapse;font-size:9pt">
-    <thead>
-      <tr style="background:#0d2b45">
-        <th style="padding:6px 8px;text-align:left;border:0.5pt solid #1e3a5f;color:white;font-size:8.5pt;white-space:nowrap;width:32px">No.</th>
-        <th style="padding:6px 8px;text-align:left;border:0.5pt solid #1e3a5f;color:white;font-size:8.5pt">施設名</th>
-        <th style="padding:6px 8px;text-align:left;border:0.5pt solid #1e3a5f;color:white;font-size:8.5pt">グループ</th>
-        <th style="padding:6px 8px;text-align:center;border:0.5pt solid #1e3a5f;color:white;font-size:8.5pt;white-space:nowrap">点検日</th>
-        <th style="padding:6px 8px;text-align:center;border:0.5pt solid #1e3a5f;color:white;font-size:8.5pt;white-space:nowrap">担当者</th>
-        <th style="padding:6px 8px;text-align:center;border:0.5pt solid #1e3a5f;color:white;font-size:8.5pt;white-space:nowrap;width:42px">判定</th>
-      </tr>
-    </thead>
-    <tbody>${rowsHTML}</tbody>
-  </table>
-  <div style="margin-top:24px;padding-top:8px;border-top:0.5pt solid #e2e8f0;display:flex;justify-content:space-between;font-size:7.5pt;color:#94a3b8">
-    <span>Sports Floor Safety Scan — 体育館床安全点検アプリ</span>
-    <span>${co.name}　|　出力日：${today}</span>
-  </div>
-</div>`;
-
-  document.getElementById('print-frame').innerHTML = html;
-  document.getElementById('print-modal').classList.add('show');
-  document.getElementById('print-modal').scrollTop = 0;
-  _printMode = 'list';
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>点検施設一覧</title>
+  <style>
+    body{font-family:-apple-system,Arial,sans-serif;margin:24px;font-size:11pt;color:#1e293b}
+    h1{font-size:16pt;color:#0d2b45;border-bottom:2pt solid #0d7a82;padding-bottom:6px;margin-bottom:4px}
+    .sub{font-size:10pt;color:#64748b;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse;font-size:10pt}
+    th{background:#0d2b45;color:white;padding:6px 8px;text-align:left;font-size:9pt}
+    td{padding:5px 8px;border:0.5pt solid #e2e8f0}
+    tr:nth-child(even) td{background:#f8fafc}
+    .footer{margin-top:24px;font-size:8pt;color:#94a3b8;border-top:0.5pt solid #e2e8f0;padding-top:6px;display:flex;justify-content:space-between}
+    @media print{body{margin:10mm} @page{margin:12mm}}
+  </style></head><body>
+  <h1>点検施設一覧レポート</h1>
+  <div class="sub">${title}　（${count}）</div>
+  ${tableHTML}
+  <div class="footer"><span>Sports Floor Safety Scan</span><span>${new Date().toLocaleDateString('ja-JP')}</span></div>
+  </body></html>`);
+  win.document.close();
+  setTimeout(() => { win.print(); }, 300);
 }
 
 // ===== 会社切替（デモモード） =====
@@ -3146,8 +3250,6 @@ function openCase(name, rating, date, groupId) {
     ];
     maps[0].nextNo = 8;
   }
-  document.getElementById('demo-mode-btn').style.display = 'none';
-  document.getElementById('company-switcher').style.display = 'none';
   document.getElementById('s-list').className = 'screen';
   document.getElementById('s-detail').className = 'screen active';
   document.getElementById('hdr-title').textContent = name;
@@ -3170,6 +3272,8 @@ function openCase(name, rating, date, groupId) {
 // ===== スプラッシュ =====
 function doLogout() {
   sessionStorage.removeItem('sfss_auth');
+  sessionStorage.removeItem('sfss_user');
+  currentSfssUser = null;
   // ログイン画面に戻る
   document.getElementById('pw-screen').style.display = 'flex';
   // 案件一覧に戻す
@@ -3178,15 +3282,26 @@ function doLogout() {
   const splash = document.getElementById('s-splash');
   if(list) list.className = 'screen';
   if(detail) detail.className = 'screen';
-  if(splash) splash.className = 'screen active';
+  if(splash) { splash.className = 'screen active'; splash.style.display = ''; }
+  // ボタン類リセット
+  const mgmtBtn = document.getElementById('user-mgmt-btn');
+  if(mgmtBtn) mgmtBtn.style.display = 'none';
+  const demoBtn = document.getElementById('demo-mode-btn');
+  if(demoBtn) demoBtn.style.display = 'none';
   // ログイン画面のinputをクリア
-  const emailEl = document.getElementById('login-email');
   const pwEl = document.getElementById('pw-input');
-  if(emailEl) emailEl.value = '';
   if(pwEl) pwEl.value = '';
   const errEl = document.getElementById('pw-error');
   if(errEl) errEl.textContent = '';
 }
+
+// 管理者UIの表示制御
+function updateAdminUI() {
+  const u = currentSfssUser;
+  const btn = document.getElementById('user-mgmt-btn');
+  if (btn) btn.style.display = (u && u.role === 'admin') ? '' : 'none';
+}
+setTimeout(updateAdminUI, 200);
 
 function goToSplash() {
   document.getElementById('demo-mode-btn').style.display = 'none';
@@ -3203,7 +3318,6 @@ function goToMain() {
   splash.style.display = '';
   document.getElementById('s-list').className = 'screen active';
   document.getElementById('demo-mode-btn').style.display = 'block';
-  // ロゴをセット（JSで定義済みのBEKIND_LOGOを使う）
   renderGroupList();
 }
 
@@ -3942,20 +4056,15 @@ ${pb}
 function closePrint() {
   document.getElementById('print-modal').classList.remove('show');
   document.getElementById('print-frame').innerHTML = '';
-  _printMode = 'case';
 }
 
 function doPrintWindow() {
+  const fname_name = document.getElementById('f-name')?.value || curCase.name || '施設名';
+  const fname_date = document.getElementById('f-date')?.value || curCase.date || '';
   const origTitle = document.title;
-  if (_printMode === 'list') {
-    document.title = _listPrintTitle;
-  } else {
-    const fname_name = document.getElementById('f-name')?.value || curCase.name || '施設名';
-    const fname_date = document.getElementById('f-date')?.value || curCase.date || '';
-    document.title = `【報告書】${fname_name}体育館床安全点検・診断調査の調査報告書_点検日：${fname_date}`;
-  }
+  document.title = `【報告書】${fname_name}体育館床安全点検・診断調査の調査報告書_点検日：${fname_date}`;
   window.print();
-  setTimeout(() => { document.title = origTitle; _printMode = 'case'; }, 500);
+  setTimeout(() => { document.title = origTitle; }, 500);
 }
 
 // ===== INIT =====
