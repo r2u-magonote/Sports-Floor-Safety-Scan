@@ -166,21 +166,21 @@ select{font-size:12px;padding:5px 8px;border:0.5px solid var(--border2);border-r
 <!-- ログイン画面 -->
 <!-- ユーザー管理モーダル -->
 <div id="user-mgmt-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.5);overflow-y:auto;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif">
-  <div style="background:white;border-radius:14px;padding:24px 20px;width:calc(100%-32px);max-width:480px;margin:24px auto">
+  <div style="background:white;border-radius:14px;padding:24px 20px;width:calc(100% - 32px);max-width:480px;margin:24px auto">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <div style="font-size:15px;font-weight:800;color:#0d2b45">👥 ユーザー管理</div>
-      <button onclick="closeUserMgmt()" style="border:none;background:none;font-size:18px;cursor:pointer;color:#64748b">✕</button>
+      <button onclick="closeUserMgmt()" style="border:none;background:none;font-size:20px;cursor:pointer;color:#64748b">✕</button>
     </div>
-    <div style="font-size:11px;color:#64748b;margin-bottom:14px;background:#f0f7ff;padding:8px 12px;border-radius:6px;line-height:1.6">
-      ・アクセスコードは20桁の英数字・記号で設定してください<br>
-      ・メールアドレスは後から追加できます（任意）<br>
-      ・管理者コードでのみこの画面を開けます
+    <div style="font-size:11px;color:#475569;margin-bottom:14px;background:#f0f7ff;padding:8px 12px;border-radius:6px;line-height:1.7">
+      ・アクセスコードは「自動生成」で作成できます<br>
+      ・メールアドレスは空欄でも登録できます（後から追加可）<br>
+      ・保存後、各自にアクセスコードをお伝えください
     </div>
     <div id="user-list-edit"></div>
     <button onclick="addUserSlot()" style="width:100%;padding:10px;background:#f1f5f9;border:1px dashed #94a3b8;border-radius:8px;font-size:13px;color:#475569;cursor:pointer;margin-top:8px">＋ ユーザーを追加</button>
     <div style="display:flex;gap:8px;margin-top:14px">
       <button onclick="saveUsers()" style="flex:1;padding:11px;background:#0d2b45;color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">💾 保存</button>
-      <button onclick="closeUserMgmt()" style="padding:11px 16px;background:#f1f5f9;border:none;border-radius:8px;font-size:13px;cursor:pointer">キャンセル</button>
+      <button onclick="closeUserMgmt()" style="padding:11px 16px;background:#f1f5f9;border:none;border-radius:8px;font-size:13px;cursor:pointer">閉じる</button>
     </div>
   </div>
 </div>
@@ -193,64 +193,50 @@ select{font-size:12px;padding:5px 8px;border:0.5px solid var(--border2);border-r
     </div>
     <div style="margin-bottom:8px">
       <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:5px">アクセスコード</div>
-      <input type="password" id="pw-input" placeholder="20桁のアクセスコードを入力" autocomplete="off"
+      <input type="password" id="pw-input" placeholder="アクセスコードを入力" autocomplete="off"
         style="width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;outline:none;letter-spacing:2px"
         onkeydown="if(event.key==='Enter')checkPW()">
     </div>
     <div id="pw-error" style="font-size:12px;color:#dc2626;min-height:18px;margin-bottom:12px;text-align:center"></div>
     <button onclick="checkPW()" style="width:100%;padding:13px;background:#0055A5;color:white;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:1px">ログイン</button>
-    <div style="text-align:center;margin-top:16px;font-size:11px;color:#cbd5e1">
-      お手元のアクセスコードを入力してください
-    </div>
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:#cbd5e1">お手元のアクセスコードを入力してください</div>
   </div>
 </div>
 
 <script>
 // ===== ユーザー管理 =====
-// ユーザーリストをlocalStorageに保存（端末間共有はFirebase移行後）
-const ADMIN_SETUP_CODE = 'SFSS-ADMIN-SETUP-2026'; // 管理者専用セットアップコード（変更推奨）
+const ADMIN_SETUP_CODE = 'SFSS-ADMIN-SETUP-2026';
+let currentSfssUser = null;
 
 function loadUsers() {
   try {
     const saved = localStorage.getItem('sfss_users');
     if (saved) return JSON.parse(saved);
   } catch(e) {}
-  // 初期デフォルト（管理者1名のみ）
-  return [
-    { id:1, name:'管理者', code:'', email:'', role:'admin', active:true, note:'' }
-  ];
+  return [{ id:1, name:'管理者', code:'', email:'', role:'admin', active:true }];
 }
-
-function saveUsersData(users) {
-  localStorage.setItem('sfss_users', JSON.stringify(users));
-}
+function saveUsersData(u) { localStorage.setItem('sfss_users', JSON.stringify(u)); }
 
 let sfssUsers = loadUsers();
-let currentSfssUser = null;
 
 function checkPW() {
   const code = document.getElementById('pw-input').value.trim();
   const errEl = document.getElementById('pw-error');
-  if (!code) {
-    errEl.textContent = 'アクセスコードを入力してください';
-    document.getElementById('pw-input').focus();
-    return;
-  }
-  // 管理者セットアップコード
+  if (!code) { errEl.textContent = 'アクセスコードを入力してください'; return; }
+
   if (code === ADMIN_SETUP_CODE) {
-    currentSfssUser = { id:0, name:'管理者（セットアップ）', role:'admin' };
-    sessionStorage.setItem('sfss_auth', '1');
+    currentSfssUser = { id:0, name:'管理者', role:'admin' };
+    sessionStorage.setItem('sfss_auth','1');
     sessionStorage.setItem('sfss_user', JSON.stringify(currentSfssUser));
     document.getElementById('pw-screen').style.display = 'none';
     updateAdminUI();
     return;
   }
-  // 登録ユーザーの照合
   const users = loadUsers();
   const matched = users.find(u => u.active && u.code === code);
   if (matched) {
     currentSfssUser = matched;
-    sessionStorage.setItem('sfss_auth', '1');
+    sessionStorage.setItem('sfss_auth','1');
     sessionStorage.setItem('sfss_user', JSON.stringify(matched));
     document.getElementById('pw-screen').style.display = 'none';
     updateAdminUI();
@@ -264,24 +250,24 @@ function checkPW() {
 (function(){
   if (sessionStorage.getItem('sfss_auth') === '1') {
     document.getElementById('pw-screen').style.display = 'none';
-    try {
-      currentSfssUser = JSON.parse(sessionStorage.getItem('sfss_user') || 'null');
-    } catch(e) {}
+    try { currentSfssUser = JSON.parse(sessionStorage.getItem('sfss_user') || 'null'); } catch(e) {}
+    setTimeout(updateAdminUI, 100);
   }
 })();
 
+function updateAdminUI() {
+  const btn = document.getElementById('user-mgmt-btn');
+  if (btn) btn.style.display = (currentSfssUser && currentSfssUser.role === 'admin') ? '' : 'none';
+}
+
 // ===== ユーザー管理画面 =====
 function openUserMgmt() {
-  const u = currentSfssUser;
-  if (!u || u.role !== 'admin') { alert('管理者のみアクセスできます'); return; }
+  if (!currentSfssUser || currentSfssUser.role !== 'admin') { alert('管理者のみアクセスできます'); return; }
   sfssUsers = loadUsers();
   renderUserList();
   document.getElementById('user-mgmt-modal').style.display = 'block';
 }
-
-function closeUserMgmt() {
-  document.getElementById('user-mgmt-modal').style.display = 'none';
-}
+function closeUserMgmt() { document.getElementById('user-mgmt-modal').style.display = 'none'; }
 
 function renderUserList() {
   const wrap = document.getElementById('user-list-edit');
@@ -291,70 +277,59 @@ function renderUserList() {
     div.style.cssText = 'border:0.5px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:8px;background:#fafafa';
     div.innerHTML = `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-        <span style="font-size:11px;font-weight:700;color:#0d2b45;background:#e0f2fe;padding:2px 8px;border-radius:10px">#${u.id}</span>
-        <input value="${u.name||''}" placeholder="名前" onchange="sfssUsers[${i}].name=this.value"
-          style="flex:1;font-size:13px;font-weight:600;border:none;border-bottom:1px solid #e2e8f0;padding:2px 4px;background:transparent;outline:none">
+        <span style="font-size:11px;font-weight:700;color:#0d2b45;background:#e0f2fe;padding:2px 8px;border-radius:10px;white-space:nowrap">#${u.id}</span>
+        <input value="${u.name||''}" placeholder="名前" oninput="sfssUsers[${i}].name=this.value"
+          style="flex:1;font-size:13px;font-weight:600;border:none;border-bottom:1px solid #e2e8f0;padding:3px 4px;background:transparent;outline:none;min-width:0">
         <select onchange="sfssUsers[${i}].role=this.value" style="font-size:11px;padding:3px 6px;border:0.5px solid #e2e8f0;border-radius:6px;background:white">
           <option value="inspector" ${u.role==='inspector'?'selected':''}>点検者</option>
           <option value="admin" ${u.role==='admin'?'selected':''}>管理者</option>
         </select>
-        <label style="font-size:11px;display:flex;align-items:center;gap:3px;cursor:pointer">
+        <label style="font-size:11px;display:flex;align-items:center;gap:3px;cursor:pointer;white-space:nowrap">
           <input type="checkbox" ${u.active?'checked':''} onchange="sfssUsers[${i}].active=this.checked"> 有効
         </label>
       </div>
       <div style="margin-bottom:6px">
-        <div style="font-size:10px;color:#64748b;margin-bottom:3px">アクセスコード（20桁）</div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <input type="text" value="${u.code||''}" placeholder="アクセスコードを入力" maxlength="30"
-            onchange="sfssUsers[${i}].code=this.value"
-            style="flex:1;font-size:12px;padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:6px;font-family:monospace;letter-spacing:1px">
+        <div style="font-size:10px;color:#64748b;margin-bottom:3px">アクセスコード</div>
+        <div style="display:flex;gap:6px">
+          <input type="text" value="${u.code||''}" placeholder="コードを入力 or 自動生成" maxlength="30"
+            oninput="sfssUsers[${i}].code=this.value"
+            style="flex:1;font-size:12px;padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:6px;font-family:monospace;min-width:0">
           <button onclick="genCode(${i})" style="font-size:11px;padding:6px 10px;background:#0d2b45;color:white;border:none;border-radius:6px;cursor:pointer;white-space:nowrap">自動生成</button>
         </div>
       </div>
       <div>
-        <div style="font-size:10px;color:#64748b;margin-bottom:3px">メールアドレス（任意・後から追加可）</div>
-        <input type="email" value="${u.email||''}" placeholder="example@company.co.jp"
-          onchange="sfssUsers[${i}].email=this.value"
+        <div style="font-size:10px;color:#64748b;margin-bottom:3px">メールアドレス（任意）</div>
+        <input type="email" value="${u.email||''}" placeholder="後から追加できます"
+          oninput="sfssUsers[${i}].email=this.value"
           style="width:100%;font-size:12px;padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;box-sizing:border-box">
-      </div>
-    `;
+      </div>`;
     wrap.appendChild(div);
   });
 }
 
 function genCode(idx) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%^&*';
-  let code = '';
   const arr = new Uint8Array(20);
   crypto.getRandomValues(arr);
-  arr.forEach(b => { code += chars[b % chars.length]; });
-  sfssUsers[idx].code = code;
+  sfssUsers[idx].code = Array.from(arr).map(b => chars[b % chars.length]).join('');
   renderUserList();
 }
 
 function addUserSlot() {
   const nextId = sfssUsers.length > 0 ? Math.max(...sfssUsers.map(u=>u.id)) + 1 : 1;
-  sfssUsers.push({ id:nextId, name:'', code:'', email:'', role:'inspector', active:true, note:'' });
+  sfssUsers.push({ id:nextId, name:'', code:'', email:'', role:'inspector', active:true });
   renderUserList();
   document.getElementById('user-list-edit').lastElementChild?.scrollIntoView({behavior:'smooth'});
 }
 
 function saveUsers() {
-  // 名前かコードが空のユーザーをチェック
   const incomplete = sfssUsers.filter(u => u.active && (!u.name || !u.code));
-  if (incomplete.length > 0) {
-    alert('有効なユーザーには名前とアクセスコードを入力してください');
-    return;
-  }
-  // コードの重複チェック
-  const codes = sfssUsers.filter(u=>u.active && u.code).map(u=>u.code);
-  if (new Set(codes).size !== codes.length) {
-    alert('アクセスコードが重複しています。それぞれ異なるコードを設定してください');
-    return;
-  }
+  if (incomplete.length) { alert('有効なユーザーには名前とアクセスコードを入力してください'); return; }
+  const codes = sfssUsers.filter(u=>u.active&&u.code).map(u=>u.code);
+  if (new Set(codes).size !== codes.length) { alert('アクセスコードが重複しています'); return; }
   saveUsersData(sfssUsers);
   closeUserMgmt();
-  alert('✅ ユーザー情報を保存しました');
+  alert('✅ 保存しました');
 }
 </script>
 
@@ -798,7 +773,10 @@ function saveUsers() {
     <div class="card" style="margin-bottom:8px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div class="st" style="margin:0">概算見積書</div>
-        <button class="bp" style="font-size:12px" onclick="generateEstimate()">見積を自動生成</button>
+        <div style="display:flex;gap:6px">
+          <button class="bp" style="font-size:12px" onclick="generateEstimate()">見積を自動生成</button>
+          <button onclick="printEstimate()" style="font-size:12px;padding:6px 12px;background:#0d2b45;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:700;white-space:nowrap">⬇ PDF</button>
+        </div>
       </div>
       <div style="font-size:11px;color:var(--text2);margin-bottom:8px">ダメージマップ・チェックリストから修繕項目を自動抽出します</div>
       <div style="overflow-x:auto">
@@ -842,6 +820,7 @@ function saveUsers() {
     <div class="card" style="margin-bottom:8px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div class="st" style="margin:0">修繕仕様書</div>
+        <div style="display:flex;gap:6px;align-items:center">
         <select id="spec-grade" style="font-size:12px;padding:4px 8px;border:0.5px solid var(--border2);border-radius:6px;background:var(--bg)" onchange="loadSpecTemplate(this.value)">
           <option value="株式会社Be-Kind">テンプレートを選択</option>
           <option value="1">Grade 1：日常清掃・簡易補修</option>
@@ -850,6 +829,8 @@ function saveUsers() {
           <option value="4">Grade 4：部分張り替え・床金具交換</option>
           <option value="5">Grade 5：全面改修（床板全面張り替え）</option>
         </select>
+        <button onclick="printSpec()" style="font-size:12px;padding:6px 12px;background:#0d2b45;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:700;white-space:nowrap">⬇ PDF</button>
+        </div>
       </div>
       <textarea id="spec-text" rows="18" style="font-size:12px;line-height:1.8;font-family:inherit" placeholder="仕様書のテンプレートを選択するか、直接入力してください"></textarea>
     </div>
@@ -903,7 +884,7 @@ function saveUsers() {
           <div style="font-size:13px;font-weight:700;color:var(--navy)" id="report-title-txt"></div>
           <div style="font-size:11px;color:var(--text2)" id="report-count-txt"></div>
         </div>
-        <button onclick="printReport()" style="font-size:12px;padding:6px 14px;background:var(--navy);color:white;border:none;border-radius:6px;cursor:pointer">PDF出力</button>
+        <button onclick="printReport()" style="font-size:12px;padding:8px 16px;background:#0d2b45;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:700;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.15)">⬇ PDF出力</button>
       </div>
       <div style="overflow-x:auto">
         <table id="report-table" style="width:100%;border-collapse:collapse;font-size:12px">
@@ -1189,7 +1170,7 @@ let iconsBackup = null;
 let claudeApiKey = ''; // Anthropic APIキー（セッション中のみ保持）
 let selType = 1;
 let editMode = false;
-let _printMode = 'case';
+let _printMode = 'case'; // 'case'|'list'|'estimate'|'spec'
 let _listPrintTitle = '';
 
 // Maps: array of map objects (max 5)
@@ -2422,36 +2403,7 @@ function buildReport() {
   document.getElementById('report-result').style.display = 'block';
 }
 
-function printReport() {
-  const co = getCurrentCompany();
-  const from = document.getElementById('report-from').value;
-  const to = document.getElementById('report-to').value;
-  const title = document.getElementById('report-title-txt').textContent;
-  const count = document.getElementById('report-count-txt').textContent;
-  const tableHTML = document.getElementById('report-table').outerHTML;
 
-  const win = window.open('', '_blank');
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
-  <title>点検施設一覧</title>
-  <style>
-    body{font-family:-apple-system,Arial,sans-serif;margin:24px;font-size:11pt;color:#1e293b}
-    h1{font-size:16pt;color:#0d2b45;border-bottom:2pt solid #0d7a82;padding-bottom:6px;margin-bottom:4px}
-    .sub{font-size:10pt;color:#64748b;margin-bottom:16px}
-    table{width:100%;border-collapse:collapse;font-size:10pt}
-    th{background:#0d2b45;color:white;padding:6px 8px;text-align:left;font-size:9pt}
-    td{padding:5px 8px;border:0.5pt solid #e2e8f0}
-    tr:nth-child(even) td{background:#f8fafc}
-    .footer{margin-top:24px;font-size:8pt;color:#94a3b8;border-top:0.5pt solid #e2e8f0;padding-top:6px;display:flex;justify-content:space-between}
-    @media print{body{margin:10mm} @page{margin:12mm}}
-  </style></head><body>
-  <h1>点検施設一覧レポート</h1>
-  <div class="sub">${title}　（${count}）</div>
-  ${tableHTML}
-  <div class="footer"><span>Sports Floor Safety Scan</span><span>${new Date().toLocaleDateString('ja-JP')}</span></div>
-  </body></html>`);
-  win.document.close();
-  setTimeout(() => { win.print(); }, 300);
-}
 
 // ===== 会社切替（デモモード） =====
 function openCompanySwitcher() {
@@ -3274,34 +3226,22 @@ function doLogout() {
   sessionStorage.removeItem('sfss_auth');
   sessionStorage.removeItem('sfss_user');
   currentSfssUser = null;
-  // ログイン画面に戻る
   document.getElementById('pw-screen').style.display = 'flex';
-  // 案件一覧に戻す
   const list = document.getElementById('s-list');
   const detail = document.getElementById('s-detail');
   const splash = document.getElementById('s-splash');
   if(list) list.className = 'screen';
   if(detail) detail.className = 'screen';
   if(splash) { splash.className = 'screen active'; splash.style.display = ''; }
-  // ボタン類リセット
   const mgmtBtn = document.getElementById('user-mgmt-btn');
   if(mgmtBtn) mgmtBtn.style.display = 'none';
   const demoBtn = document.getElementById('demo-mode-btn');
   if(demoBtn) demoBtn.style.display = 'none';
-  // ログイン画面のinputをクリア
   const pwEl = document.getElementById('pw-input');
   if(pwEl) pwEl.value = '';
   const errEl = document.getElementById('pw-error');
   if(errEl) errEl.textContent = '';
 }
-
-// 管理者UIの表示制御
-function updateAdminUI() {
-  const u = currentSfssUser;
-  const btn = document.getElementById('user-mgmt-btn');
-  if (btn) btn.style.display = (u && u.role === 'admin') ? '' : 'none';
-}
-setTimeout(updateAdminUI, 200);
 
 function goToSplash() {
   document.getElementById('demo-mode-btn').style.display = 'none';
@@ -4056,15 +3996,208 @@ ${pb}
 function closePrint() {
   document.getElementById('print-modal').classList.remove('show');
   document.getElementById('print-frame').innerHTML = '';
+  _printMode = 'case';
 }
 
 function doPrintWindow() {
-  const fname_name = document.getElementById('f-name')?.value || curCase.name || '施設名';
-  const fname_date = document.getElementById('f-date')?.value || curCase.date || '';
   const origTitle = document.title;
-  document.title = `【報告書】${fname_name}体育館床安全点検・診断調査の調査報告書_点検日：${fname_date}`;
+  if (_printMode === 'list') {
+    document.title = _listPrintTitle;
+  } else if (_printMode === 'estimate') {
+    const n = document.getElementById('f-name')?.value || curCase?.name || '施設';
+    document.title = `【概算見積書】${n}`;
+  } else if (_printMode === 'spec') {
+    const n = document.getElementById('f-name')?.value || curCase?.name || '施設';
+    const g = document.getElementById('spec-grade');
+    const gl = g ? g.options[g.selectedIndex]?.text : '';
+    document.title = `【修繕仕様書】${n}_${gl}`;
+  } else {
+    const fname_name = document.getElementById('f-name')?.value || curCase?.name || '施設名';
+    const fname_date = document.getElementById('f-date')?.value || curCase?.date || '';
+    document.title = `【報告書】${fname_name}体育館床安全点検・診断調査の調査報告書_点検日：${fname_date}`;
+  }
   window.print();
-  setTimeout(() => { document.title = origTitle; }, 500);
+  setTimeout(() => { document.title = origTitle; _printMode = 'case'; }, 500);
+}
+
+// ===== 一覧レポートPDF =====
+function printReport() {
+  const co = getCurrentCompany();
+  const from = document.getElementById('report-from').value;
+  const to = document.getElementById('report-to').value;
+  const titleTxt = document.getElementById('report-title-txt')?.textContent || '';
+  const countTxt = document.getElementById('report-count-txt')?.textContent || '';
+  const today = new Date().toLocaleDateString('ja-JP');
+  _listPrintTitle = `【一覧レポート】${co.name}_点検施設一覧_${from}〜${to}`;
+
+  const tbodyRows = document.getElementById('report-tbody');
+  let rowsHTML = '';
+  if (tbodyRows) {
+    tbodyRows.querySelectorAll('tr').forEach((tr, i) => {
+      const cells = tr.querySelectorAll('td');
+      if (!cells.length) return;
+      const bg = i % 2 === 0 ? 'white' : '#f8fafc';
+      rowsHTML += `<tr style="background:${bg}">`;
+      cells.forEach(td => {
+        rowsHTML += `<td style="${td.getAttribute('style') || 'padding:5px 8px;border:0.5pt solid #e2e8f0'}">${td.innerHTML}</td>`;
+      });
+      rowsHTML += '</tr>';
+    });
+  }
+  const html = `<div style="padding:28px 36px;font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic','Meiryo',Arial,sans-serif;color:#1e293b">
+  <div style="border-bottom:2.5pt solid #0d2b45;padding-bottom:14px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:flex-end">
+    <div><div style="font-size:17pt;font-weight:800;color:#0d2b45;letter-spacing:1px">点検施設一覧レポート</div>
+    <div style="font-size:8.5pt;color:#64748b;margin-top:4px">Sports Floor Safety Scan</div></div>
+    <div style="text-align:right"><div style="font-size:12pt;font-weight:700;color:#0d2b45">${co.name}</div>
+    <div style="font-size:8.5pt;color:#64748b">出力日：${today}</div></div>
+  </div>
+  <div style="background:#f0f7ff;border-left:3px solid #0d2b45;border-radius:0 6px 6px 0;padding:8px 14px;margin-bottom:16px">
+    <div style="font-size:10pt;font-weight:700;color:#0d2b45">${titleTxt}</div>
+    <div style="font-size:8.5pt;color:#64748b;margin-top:2px">${countTxt}</div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:9pt">
+    <thead><tr style="background:#0d2b45">
+      <th style="padding:6px 8px;text-align:left;border:0.5pt solid #1e3a5f;color:white;font-size:8.5pt;width:32px">No.</th>
+      <th style="padding:6px 8px;text-align:left;border:0.5pt solid #1e3a5f;color:white;font-size:8.5pt">施設名</th>
+      <th style="padding:6px 8px;text-align:left;border:0.5pt solid #1e3a5f;color:white;font-size:8.5pt">グループ</th>
+      <th style="padding:6px 8px;text-align:center;border:0.5pt solid #1e3a5f;color:white;font-size:8.5pt;white-space:nowrap">点検日</th>
+      <th style="padding:6px 8px;text-align:center;border:0.5pt solid #1e3a5f;color:white;font-size:8.5pt;white-space:nowrap">担当者</th>
+      <th style="padding:6px 8px;text-align:center;border:0.5pt solid #1e3a5f;color:white;font-size:8.5pt;width:42px">判定</th>
+    </tr></thead>
+    <tbody>${rowsHTML}</tbody>
+  </table>
+  <div style="margin-top:20px;padding-top:8px;border-top:0.5pt solid #e2e8f0;display:flex;justify-content:space-between;font-size:7.5pt;color:#94a3b8">
+    <span>Sports Floor Safety Scan</span><span>${co.name}　|　出力日：${today}</span>
+  </div></div>`;
+  document.getElementById('print-frame').innerHTML = html;
+  document.getElementById('print-modal').classList.add('show');
+  document.getElementById('print-modal').scrollTop = 0;
+  _printMode = 'list';
+}
+
+// ===== 見積書PDF =====
+function printEstimate() {
+  const co = getCurrentCompany ? getCurrentCompany() : {name:'株式会社Be-Kind'};
+  const facilityName = document.getElementById('f-name')?.value || curCase?.name || '施設名';
+  const inspDate = document.getElementById('f-date')?.value || curCase?.date || '';
+  const today = new Date().toLocaleDateString('ja-JP');
+  const notes = document.getElementById('estimate-notes')?.value || '';
+
+  let rowsHTML = '';
+  let subtotal = 0;
+  (estimateRows || []).forEach((row, i) => {
+    if (!row.name && !row.price) return;
+    const amt = (row.qty || 1) * (row.price || 0);
+    subtotal += amt;
+    const bg = i % 2 === 0 ? 'white' : '#f8fafc';
+    rowsHTML += `<tr style="background:${bg}">
+      <td style="padding:6px 10px;border:0.5pt solid #e2e8f0">${row.name||''}</td>
+      <td style="padding:6px 10px;border:0.5pt solid #e2e8f0;text-align:center">${row.qty||1}</td>
+      <td style="padding:6px 10px;border:0.5pt solid #e2e8f0;text-align:center">${row.unit||'式'}</td>
+      <td style="padding:6px 10px;border:0.5pt solid #e2e8f0;text-align:right">${(row.price||0).toLocaleString()}</td>
+      <td style="padding:6px 10px;border:0.5pt solid #e2e8f0;text-align:right;font-weight:600">${amt.toLocaleString()}</td>
+    </tr>`;
+  });
+
+  if (!rowsHTML) {
+    alert('見積項目がありません。「見積を自動生成」または「＋行を追加」で項目を作成してください。');
+    return;
+  }
+
+  const tax = Math.floor(subtotal * 0.1);
+  const total = subtotal + tax;
+
+  const html = `<div style="padding:32px 40px;font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic','Meiryo',Arial,sans-serif;color:#1e293b">
+  <div style="text-align:center;margin-bottom:28px">
+    <div style="font-size:20pt;font-weight:800;color:#0d2b45;letter-spacing:2px;border-bottom:2.5pt solid #0d2b45;padding-bottom:10px;display:inline-block;min-width:300px">概　算　見　積　書</div>
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-bottom:24px;gap:20px">
+    <div style="flex:1">
+      <table style="font-size:10pt;border-collapse:collapse;width:100%">
+        <tr><td style="padding:4px 0;color:#64748b;width:80px">施設名</td><td style="padding:4px 8px;font-weight:700;font-size:12pt;color:#0d2b45;border-bottom:1pt solid #0d2b45">${facilityName}</td></tr>
+        <tr><td style="padding:4px 0;color:#64748b">点検日</td><td style="padding:4px 8px">${inspDate}</td></tr>
+        <tr><td style="padding:4px 0;color:#64748b">作成日</td><td style="padding:4px 8px">${today}</td></tr>
+      </table>
+    </div>
+    <div style="text-align:right;min-width:180px">
+      <div style="font-size:13pt;font-weight:800;color:#0d2b45">${co.name}</div>
+      <div style="font-size:8.5pt;color:#64748b;margin-top:4px">Sports Floor Safety Scan</div>
+    </div>
+  </div>
+  <div style="background:#0d2b45;color:white;border-radius:8px;padding:12px 20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
+    <div style="font-size:11pt;font-weight:700">御見積金額（税込）</div>
+    <div style="font-size:18pt;font-weight:800">¥ ${total.toLocaleString()}</div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:9.5pt;margin-bottom:16px">
+    <thead><tr style="background:#f1f5f9">
+      <th style="padding:7px 10px;text-align:left;border:0.5pt solid #e2e8f0;font-size:9pt">修繕項目</th>
+      <th style="padding:7px 10px;text-align:center;border:0.5pt solid #e2e8f0;font-size:9pt;width:50px">数量</th>
+      <th style="padding:7px 10px;text-align:center;border:0.5pt solid #e2e8f0;font-size:9pt;width:40px">単位</th>
+      <th style="padding:7px 10px;text-align:right;border:0.5pt solid #e2e8f0;font-size:9pt;width:90px">単価(円)</th>
+      <th style="padding:7px 10px;text-align:right;border:0.5pt solid #e2e8f0;font-size:9pt;width:90px">金額(円)</th>
+    </tr></thead>
+    <tbody>${rowsHTML}</tbody>
+    <tfoot>
+      <tr><td colspan="4" style="padding:6px 10px;text-align:right;border:0.5pt solid #e2e8f0;font-weight:700">小計</td><td style="padding:6px 10px;text-align:right;border:0.5pt solid #e2e8f0;font-weight:700">${subtotal.toLocaleString()}</td></tr>
+      <tr><td colspan="4" style="padding:6px 10px;text-align:right;border:0.5pt solid #e2e8f0">消費税（10%）</td><td style="padding:6px 10px;text-align:right;border:0.5pt solid #e2e8f0">${tax.toLocaleString()}</td></tr>
+      <tr style="background:#eff6ff"><td colspan="4" style="padding:8px 10px;text-align:right;border:0.5pt solid #e2e8f0;font-weight:800;font-size:11pt">合計（税込）</td><td style="padding:8px 10px;text-align:right;border:0.5pt solid #e2e8f0;font-weight:800;font-size:11pt;color:#0d2b45">${total.toLocaleString()}</td></tr>
+    </tfoot>
+  </table>
+  ${notes ? `<div style="border:0.5pt solid #e2e8f0;border-radius:6px;padding:10px 14px;margin-bottom:16px;background:#f8fafc"><div style="font-size:8.5pt;font-weight:700;color:#64748b;margin-bottom:4px">備考・特記事項</div><div style="font-size:9.5pt;line-height:1.7;white-space:pre-wrap">${notes}</div></div>` : ''}
+  <div style="margin-top:20px;padding-top:8px;border-top:0.5pt solid #e2e8f0;display:flex;justify-content:space-between;font-size:7.5pt;color:#94a3b8">
+    <span>Sports Floor Safety Scan — 体育館床安全点検アプリ</span><span>${co.name}　|　作成日：${today}</span>
+  </div></div>`;
+
+  document.getElementById('print-frame').innerHTML = html;
+  document.getElementById('print-modal').classList.add('show');
+  document.getElementById('print-modal').scrollTop = 0;
+  _printMode = 'estimate';
+}
+
+// ===== 仕様書PDF =====
+function printSpec() {
+  const co = getCurrentCompany ? getCurrentCompany() : {name:'株式会社Be-Kind'};
+  const facilityName = document.getElementById('f-name')?.value || curCase?.name || '施設名';
+  const inspDate = document.getElementById('f-date')?.value || curCase?.date || '';
+  const today = new Date().toLocaleDateString('ja-JP');
+  const specText = document.getElementById('spec-text')?.value || '';
+  const gradeEl = document.getElementById('spec-grade');
+  const gradeLabel = gradeEl ? gradeEl.options[gradeEl.selectedIndex]?.text : '';
+
+  if (!specText.trim()) {
+    alert('仕様書の内容がありません。テンプレートを選択するか、直接入力してください。');
+    return;
+  }
+
+  const html = `<div style="padding:32px 40px;font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic','Meiryo',Arial,sans-serif;color:#1e293b">
+  <div style="text-align:center;margin-bottom:24px">
+    <div style="font-size:20pt;font-weight:800;color:#0d2b45;letter-spacing:2px;border-bottom:2.5pt solid #0d2b45;padding-bottom:10px;display:inline-block;min-width:300px">修　繕　仕　様　書</div>
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-bottom:20px;gap:20px">
+    <div style="flex:1">
+      <table style="font-size:10pt;border-collapse:collapse;width:100%">
+        <tr><td style="padding:4px 0;color:#64748b;width:80px">施設名</td><td style="padding:4px 8px;font-weight:700;font-size:12pt;color:#0d2b45;border-bottom:1pt solid #0d2b45">${facilityName}</td></tr>
+        ${gradeLabel && gradeLabel !== 'テンプレートを選択' ? `<tr><td style="padding:4px 0;color:#64748b">グレード</td><td style="padding:4px 8px;font-weight:600">${gradeLabel}</td></tr>` : ''}
+        <tr><td style="padding:4px 0;color:#64748b">点検日</td><td style="padding:4px 8px">${inspDate}</td></tr>
+        <tr><td style="padding:4px 0;color:#64748b">作成日</td><td style="padding:4px 8px">${today}</td></tr>
+      </table>
+    </div>
+    <div style="text-align:right;min-width:180px">
+      <div style="font-size:13pt;font-weight:800;color:#0d2b45">${co.name}</div>
+      <div style="font-size:8.5pt;color:#64748b;margin-top:4px">Sports Floor Safety Scan</div>
+    </div>
+  </div>
+  <div style="border:1pt solid #e2e8f0;border-radius:6px;padding:20px 24px;background:#fafafa;min-height:300px">
+    <div style="font-size:9.5pt;line-height:2;white-space:pre-wrap;color:#1e293b">${specText}</div>
+  </div>
+  <div style="margin-top:20px;padding-top:8px;border-top:0.5pt solid #e2e8f0;display:flex;justify-content:space-between;font-size:7.5pt;color:#94a3b8">
+    <span>Sports Floor Safety Scan — 体育館床安全点検アプリ</span><span>${co.name}　|　作成日：${today}</span>
+  </div></div>`;
+
+  document.getElementById('print-frame').innerHTML = html;
+  document.getElementById('print-modal').classList.add('show');
+  document.getElementById('print-modal').scrollTop = 0;
+  _printMode = 'spec';
 }
 
 // ===== INIT =====
